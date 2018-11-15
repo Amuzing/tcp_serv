@@ -20,6 +20,7 @@
 #define PORT "5678"
 #define STR_PATH "some_path.log"
 #define N_CON 10
+#define NT_TO_STR_CR_SIZE(x) ((x) + 1)
 
 
 int load_strings(const char* path, std::list<std::string>& storage);
@@ -51,6 +52,10 @@ int main() {
   socklen_t addrlen;
 
   char buf[256];
+  char welcome_buf[] = "Hello. To add a string to the server, type 1 and the string as a param.\n"
+                       "To remove the string from the server, type 2 and the string as a param.\n"
+                       "To list all the strings and the ones who added them, type 3.\n";
+  
   int nbytes;
 
   int yes = 1;
@@ -62,6 +67,16 @@ int main() {
 
   struct addrinfo hints;
   struct addrinfo *ai, *p;
+
+  struct sigaction hup_sa;
+  hup_sa.sa_handler = sighup_handler;
+  hup_sa.sa_flags = 0;
+  sigemptyset(&hup_sa.sa_mask);
+
+  if (sigaction(SIGHUP, &hup_sa, NULL) == -1) {
+    perror("sigaction");
+    return 5;
+  }
 
   load_strings(STR_PATH, str_storage);
 
@@ -132,6 +147,7 @@ int main() {
               fdmax = newfd;
             }
             printf("some1 connected on socket %d\n", newfd);
+            send(newfd, welcome_buf, sizeof(welcome_buf), 0);
           }
         } else {
           if ((nbytes = recv(i, buf, sizeof(buf), 0)) <= 0) {
@@ -229,7 +245,7 @@ int print_strings(int fd, const std::list<std::string>& storage) {
   send(fd, delims, strlen(delims), 0);
   for(auto it = std::begin(storage); it != std::end(storage); ++it) {
     printf("sending: %s", it->c_str());
-    if(send(fd, (*it + "\n").c_str(), it->size() + 2, 0) == -1) {
+    if(send(fd, (*it + "\n").c_str(), NT_TO_STR_CR_SIZE(it->size()), 0) == -1) {
       perror("failed to send");
     }
   } 
@@ -266,11 +282,12 @@ int handle_request(int fd, std::string& msg, std::list<std::string>& storage,
 }
 
 void sighup_handler(int sig) {
-  sig_atomic_t fd = open(STR_PATH, O_WRONLY);
+  sig_atomic_t fd = open(STR_PATH, O_WRONLY | O_CREAT | O_TRUNC, 777);
   if (fd != -1) {
     for(auto it = std::begin(str_storage); it != std::end(str_storage); ++it) {
-      write(fd, it->c_str(), it->size() + 1);
+      write(fd, (*it + "\n").c_str(), NT_TO_STR_CR_SIZE(it->size()));
     }
+    close(fd);
   } else {
     perror("failed to open a file for dumping data");
   }
