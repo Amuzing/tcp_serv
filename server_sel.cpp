@@ -1,32 +1,36 @@
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
-#include <stdbool.h>
 
-#include <string>
 #include <map>
-#include <set>
+#include <string>
+#include <vector>
+
+#include <fstream>
 
 #define PORT "5678"
 #define STR_PATH "some_path.log"
 #define N_CON 10
 
+int load_strings(const char* path, std::vector<std::string>& storage);
+int dump_strings(const char* path, std::vector<std::string>& storage);
 
-int load_strings(const char* path, std::set<std::string>& storage);
-int dump_strings(const char* path, std::set<std::string>& storage);
+int handle_request(int fd, std::string& msg, std::vector<std::string>& storage,
+                   std::map<int, std::string>& names);
+int parse_msg(std::string& msg);
 
-int handle_request(int fd, std::string msg);
-
-int set_con_name(int fd, std::string name);
-int save_string(std::string str);
-int remove_string(std::string str);
-std::set<std::string> get_strings();
+int set_con_name(int fd, const std::string& name,
+                 std::map<int, std::string> names);
+int save_string(const std::string& str, const std::string& name, std::vector<std::string>& storage);
+int remove_string(const std::string& str, std::vector<std::string>& storage);
+std::vector<std::string> get_strings();
 
 int main() {
   fd_set master_set;
@@ -49,7 +53,7 @@ int main() {
   tv.tv_usec = 0;
 
   struct addrinfo hints;
-  struct addrinfo* ai, * p;
+  struct addrinfo *ai, *p;
 
   FD_ZERO(&master_set);
   FD_ZERO(&recent_set);
@@ -63,7 +67,7 @@ int main() {
     return 1;
   }
 
-  for(p = ai; p != NULL; p = p->ai_next) {
+  for (p = ai; p != NULL; p = p->ai_next) {
     listenerfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
     if (listenerfd < 0) {
       continue;
@@ -86,7 +90,7 @@ int main() {
 
   freeaddrinfo(ai);
 
-  if(listen(listenerfd, N_CON) == -1) {
+  if (listen(listenerfd, N_CON) == -1) {
     perror("failed to listen");
     return 3;
   }
@@ -95,14 +99,14 @@ int main() {
 
   fdmax = listenerfd;
 
-  while(true) {
+  while (true) {
     recent_set = master_set;
     if (select(fdmax + 1, &recent_set, NULL, NULL, NULL) == -1) {
       perror("failed to select");
       return 4;
     }
 
-    for(i = 0; i <= fdmax; ++i) {
+    for (i = 0; i <= fdmax; ++i) {
       if (FD_ISSET(i, &recent_set)) {
         if (i == listenerfd) {
           addrlen = sizeof(remoteaddr);
@@ -127,12 +131,85 @@ int main() {
             close(i);
             FD_CLR(i, &master_set);
           } else {
-
           }
-          //TODO
+          // TODO
         }
       }
-    } //END SELECT
-  } //END WHILE
+    }  // END SELECT
+  }    // END WHILE
   return 0;
+}
+
+int load_strings(const char* path, std::vector<std::string>& storage) {
+  std::ifstream infile(path);
+  std::string line;
+  if (infile.is_open()) {
+    while (std::getline(infile, line)) {
+      storage.push_back(line);
+    }
+    printf("strings loaded\n");
+    return 0;
+  } else {
+    fprintf(stderr,
+            "SERVER_SEL ERROR: cannot open the file %s, the new one will be "
+            "created",
+            path);
+    // fprintf(stderr, "SERVER_SEL ERROR: cannot open the file %s", path);
+    return 1;
+  }
+}
+
+int dump_strings(const char* path, const std::vector<std::string>& storage) {
+  std::ofstream outfile(path);
+  if (outfile.is_open()) {
+    for (int i = 0; i < storage.size(); ++i) {
+      outfile << storage[i] << std::endl;
+    }
+    return 0;
+  } else {
+    fprintf(stderr, "SERVER_SEL ERROR: cannot open the file %s", path);
+    return 1;
+  }
+}
+
+int handle_request(int fd, std::string& msg, std::vector<std::string>& storage,
+                   std::map<int, std::string>& names) {
+  int command = parse_msg(msg);
+  switch (command) {
+    case 0: {
+      set_con_name(fd, msg, names);
+      break;
+    }
+    case 1: {
+      save_string(msg, names[fd], storage);
+      break;
+    }
+    case 2: {
+      remove_string(msg, storage);
+      break;
+    }
+    case 3: {
+      get_strings();
+      break;
+    }
+    default: {
+      fprintf(stderr, "unrecognized command\n");
+      return 1;
+    }
+  }
+}
+
+int parse_msg(std::string& msg) {
+  int rval = -1;
+  if (msg.size() > 0) {
+    rval = msg[0];
+  }
+  if (msg.size() > 2) {
+    msg = msg.substr(2);
+  }
+  return rval;
+}
+
+int save_string(const std::string& msg, const std::string& name, std::vector<std::string> storage) {
+  storage.push_back(msg + ", by " + name);
 }
