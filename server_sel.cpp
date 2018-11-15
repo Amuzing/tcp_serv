@@ -9,9 +9,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <list>
 #include <map>
 #include <string>
-#include <vector>
 
 #include <fstream>
 
@@ -19,18 +19,19 @@
 #define STR_PATH "some_path.log"
 #define N_CON 10
 
-int load_strings(const char* path, std::vector<std::string>& storage);
-int dump_strings(const char* path, std::vector<std::string>& storage);
+int load_strings(const char* path, std::list<std::string>& storage);
+int dump_strings(const char* path, std::list<std::string>& storage);
 
-int handle_request(int fd, std::string& msg, std::vector<std::string>& storage,
+int handle_request(int fd, std::string& msg, std::list<std::string>& storage,
                    std::map<int, std::string>& names);
 int parse_msg(std::string& msg);
 
 int set_con_name(int fd, const std::string& name,
-                 std::map<int, std::string> names);
-int save_string(const std::string& str, const std::string& name, std::vector<std::string>& storage);
-int remove_string(const std::string& str, std::vector<std::string>& storage);
-std::vector<std::string> get_strings();
+                 std::map<int, std::string>& names);
+int save_string(const std::string& str, const std::string& name,
+                std::list<std::string>& storage);
+int remove_string(const std::string& str, std::list<std::string>& storage);
+int print_strings(int fd, const std::list<std::string>& storage);
 
 int main() {
   fd_set master_set;
@@ -54,6 +55,11 @@ int main() {
 
   struct addrinfo hints;
   struct addrinfo *ai, *p;
+
+  std::list<std::string> str_storage;
+  load_strings(STR_PATH, str_storage);
+
+  std::map<int, std::string> names;
 
   FD_ZERO(&master_set);
   FD_ZERO(&recent_set);
@@ -131,6 +137,8 @@ int main() {
             close(i);
             FD_CLR(i, &master_set);
           } else {
+            std::string request(buf);
+            handle_request(i, request, str_storage, names);
           }
           // TODO
         }
@@ -140,7 +148,7 @@ int main() {
   return 0;
 }
 
-int load_strings(const char* path, std::vector<std::string>& storage) {
+int load_strings(const char* path, std::list<std::string>& storage) {
   std::ifstream infile(path);
   std::string line;
   if (infile.is_open()) {
@@ -152,27 +160,75 @@ int load_strings(const char* path, std::vector<std::string>& storage) {
   } else {
     fprintf(stderr,
             "SERVER_SEL ERROR: cannot open the file %s, the new one will be "
-            "created",
+            "created\n",
             path);
     // fprintf(stderr, "SERVER_SEL ERROR: cannot open the file %s", path);
     return 1;
   }
 }
 
-int dump_strings(const char* path, const std::vector<std::string>& storage) {
+int dump_strings(const char* path, const std::list<std::string>& storage) {
   std::ofstream outfile(path);
   if (outfile.is_open()) {
-    for (int i = 0; i < storage.size(); ++i) {
-      outfile << storage[i] << std::endl;
+    for (auto it = std::begin(storage); it != std::end(storage); ++it) {
+      outfile << *it << std::endl;
     }
     return 0;
   } else {
-    fprintf(stderr, "SERVER_SEL ERROR: cannot open the file %s", path);
+    fprintf(stderr, "SERVER_SEL ERROR: cannot open the file %s\n", path);
     return 1;
   }
 }
 
-int handle_request(int fd, std::string& msg, std::vector<std::string>& storage,
+int set_con_name(int fd, const std::string& name,
+                 std::map<int, std::string>& names) {
+  names[fd] = name;
+  return 0;
+}
+
+int parse_msg(std::string& msg) {
+  int rval = -1;
+  if (msg.size() > 0) {
+    rval = msg[0] - '0';
+  }
+  if (msg.size() > 2) {
+    msg = msg.substr(2);
+  }
+  return rval;
+}
+
+int save_string(const std::string& str, const std::string& name,
+                std::list<std::string>& storage) {
+  storage.push_back(str + ", by " + name);
+  return 0;
+}
+
+int remove_string(const std::string& str, std::list<std::string>& storage) {
+  for (auto it = std::begin(storage); it != std::end(storage);) {
+    if (it->find(str) != std::string::npos) {
+      auto next_it = std::next(it);
+      storage.erase(it);
+      it = next_it;
+    } else {
+      ++it;
+    }
+  }
+  return 0;
+}
+
+int print_strings(int fd, const std::list<std::string>& storage) {
+  const char* delims = "**************************\n";
+  send(fd, delims, strlen(delims), 0);
+  for(auto it = std::begin(storage); it != std::end(storage); ++it) {
+    if(send(fd, it->c_str(), it->size(), 0) == -1) {
+      perror("failed to send");
+    }
+  } 
+  send(fd, delims, strlen(delims), 0);
+  return 0; 
+}
+
+int handle_request(int fd, std::string& msg, std::list<std::string>& storage,
                    std::map<int, std::string>& names) {
   int command = parse_msg(msg);
   switch (command) {
@@ -189,27 +245,13 @@ int handle_request(int fd, std::string& msg, std::vector<std::string>& storage,
       break;
     }
     case 3: {
-      get_strings();
+      print_strings(fd, storage);
       break;
     }
     default: {
-      fprintf(stderr, "unrecognized command\n");
+      fprintf(stderr, "unrecognized command %d\n", command);
       return 1;
     }
   }
-}
-
-int parse_msg(std::string& msg) {
-  int rval = -1;
-  if (msg.size() > 0) {
-    rval = msg[0];
-  }
-  if (msg.size() > 2) {
-    msg = msg.substr(2);
-  }
-  return rval;
-}
-
-int save_string(const std::string& msg, const std::string& name, std::vector<std::string> storage) {
-  storage.push_back(msg + ", by " + name);
+  return 0;
 }
