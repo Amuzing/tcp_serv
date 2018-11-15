@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -8,12 +9,24 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+#include <string>
+#include <map>
+#include <set>
+
 #define PORT "5678"
 #define STR_PATH "some_path.log"
 #define N_CON 10
 
-int load_strings(const char* path);
 
+int load_strings(const char* path, std::set<std::string>& storage);
+int dump_strings(const char* path, std::set<std::string>& storage);
+
+int handle_request(int fd, std::string msg);
+
+int set_con_name(int fd, std::string name);
+int save_string(std::string str);
+int remove_string(std::string str);
+std::set<std::string> get_strings();
 
 int main() {
   fd_set master_set;
@@ -30,6 +43,10 @@ int main() {
 
   int yes = 1;
   int i, rval;
+
+  struct timeval tv;
+  tv.tv_sec = 60;
+  tv.tv_usec = 0;
 
   struct addrinfo hints;
   struct addrinfo* ai, * p;
@@ -109,6 +126,8 @@ int main() {
             }
             close(i);
             FD_CLR(i, &master_set);
+          } else {
+
           }
           //TODO
         }
