@@ -1,6 +1,8 @@
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,6 +21,7 @@
 #define STR_PATH "some_path.log"
 #define N_CON 10
 
+
 int load_strings(const char* path, std::list<std::string>& storage);
 int dump_strings(const char* path, std::list<std::string>& storage);
 
@@ -32,6 +35,10 @@ int save_string(const std::string& str, const std::string& name,
                 std::list<std::string>& storage);
 int remove_string(const std::string& str, std::list<std::string>& storage);
 int print_strings(int fd, const std::list<std::string>& storage);
+
+std::list<std::string> str_storage;
+
+void sighup_handler(int sig);
 
 int main() {
   fd_set master_set;
@@ -56,7 +63,6 @@ int main() {
   struct addrinfo hints;
   struct addrinfo *ai, *p;
 
-  std::list<std::string> str_storage;
   load_strings(STR_PATH, str_storage);
 
   std::map<int, std::string> names;
@@ -137,7 +143,8 @@ int main() {
             close(i);
             FD_CLR(i, &master_set);
           } else {
-            std::string request(buf);
+            printf("\n nbytes: %d, string from buf:%s!!!!\n", nbytes, buf);
+            std::string request(buf, nbytes-2);
             handle_request(i, request, str_storage, names);
           }
           // TODO
@@ -187,6 +194,7 @@ int set_con_name(int fd, const std::string& name,
 }
 
 int parse_msg(std::string& msg) {
+  printf("string: %s size: %d\n", msg.c_str(), msg.size());
   int rval = -1;
   if (msg.size() > 0) {
     rval = msg[0] - '0';
@@ -220,7 +228,8 @@ int print_strings(int fd, const std::list<std::string>& storage) {
   const char* delims = "**************************\n";
   send(fd, delims, strlen(delims), 0);
   for(auto it = std::begin(storage); it != std::end(storage); ++it) {
-    if(send(fd, it->c_str(), it->size(), 0) == -1) {
+    printf("sending: %s", it->c_str());
+    if(send(fd, (*it + "\n").c_str(), it->size() + 2, 0) == -1) {
       perror("failed to send");
     }
   } 
@@ -254,4 +263,15 @@ int handle_request(int fd, std::string& msg, std::list<std::string>& storage,
     }
   }
   return 0;
+}
+
+void sighup_handler(int sig) {
+  sig_atomic_t fd = open(STR_PATH, O_WRONLY);
+  if (fd != -1) {
+    for(auto it = std::begin(str_storage); it != std::end(str_storage); ++it) {
+      write(fd, it->c_str(), it->size() + 1);
+    }
+  } else {
+    perror("failed to open a file for dumping data");
+  }
 }
