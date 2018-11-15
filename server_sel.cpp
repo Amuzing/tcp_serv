@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -59,11 +60,18 @@ int main() {
   int nbytes;
 
   int yes = 1;
+  int idle_time = 60;
+
+
   int i, rval;
 
-  struct timeval tv;
-  tv.tv_sec = 60;
-  tv.tv_usec = 0;
+  struct timeval master_tv;
+  master_tv.tv_sec = 60;
+  master_tv.tv_usec = 0;
+  struct timeval recent_tv;
+  recent_tv.tv_sec = 60;
+  recent_tv.tv_usec = 0;
+  
 
   struct addrinfo hints;
   struct addrinfo *ai, *p;
@@ -99,8 +107,7 @@ int main() {
     if (listenerfd < 0) {
       continue;
     }
-
-    setsockopt(listenerfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+    setsockopt(listenerfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
     if (bind(listenerfd, p->ai_addr, p->ai_addrlen) < 0) {
       close(listenerfd);
@@ -128,7 +135,8 @@ int main() {
 
   while (true) {
     recent_set = master_set;
-    if (select(fdmax + 1, &recent_set, NULL, NULL, NULL) == -1) {
+    recent_tv = master_tv;
+    if (select(fdmax + 1, &recent_set, NULL, NULL, &recent_tv) == -1) {
       perror("failed to select");
       return 4;
     }
@@ -142,6 +150,14 @@ int main() {
           if (newfd == -1) {
             perror("failed to accept");
           } else {
+            // keep-alive
+            if (setsockopt(newfd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) == -1) {
+              perror("setsockopt(SO_KEEPALIVE)");
+            } 
+            if (setsockopt(newfd, IPPROTO_IP, TCP_KEEPIDLE, &idle_time, sizeof(idle_time)) == -1) {
+              perror("setsockopt(TCP_KEEPIDLE)");
+            }
+
             FD_SET(newfd, &master_set);
             if (newfd > fdmax) {
               fdmax = newfd;
@@ -210,7 +226,7 @@ int set_con_name(int fd, const std::string& name,
 }
 
 int parse_msg(std::string& msg) {
-  printf("string: %s size: %d\n", msg.c_str(), msg.size());
+  printf("string: %s size: %lu\n", msg.c_str(), msg.size());
   int rval = -1;
   if (msg.size() > 0) {
     rval = msg[0] - '0';
