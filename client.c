@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #define PORT "5678"
+#define MAX_NAME 64
 #define MAX_SIZE 256
 
 #define CMD_NAME "0 "
@@ -37,9 +38,10 @@ int main(int argc, char* argv[]) {
   int yes = 1;
   int idle_time = 60;
   int rv;
-  bool is_true = false;
+  bool is_true = true;;
   char* address = NULL;
 
+  char name[MAX_NAME];
   char buf[MAX_SIZE];
 
   memset(&hints, 0, sizeof(hints));
@@ -102,10 +104,14 @@ int main(int argc, char* argv[]) {
 
   buf[nbytes] = '\0';
 
-  printf("%s", buf);
+  printf("%s\n", buf);
+
+  printf("enter your name:\n");
+  scanf("%s", name);
+  do_string(fd, CMD_NAME, name);
 
   while (is_true) {
-    is_true = handle_command(fd);
+    is_true = handle_command(fd, buf);
   }
 
   close(fd);
@@ -114,7 +120,7 @@ int main(int argc, char* argv[]) {
 }
 
 int send_msg(int fd, char* buf) {
-  if (send(fd, buf, strlen(buf) + 1, 0) == -1) {
+  if (send(fd, buf, sizeof(buf), 0) == -1) {
     perror("failed to send");
     return 1;
   }
@@ -135,7 +141,7 @@ int read_strings(int fd, char* buf) {
   while (is_true) {
     if ((nbytes = recv(fd, buf, sizeof(buf), 0)) <= 0) {
       if (nbytes == 0) {
-        printf("connection on socket %d was closed\n", i);
+        printf("connection on socket %d was closed\n", fd);
         return 1;
       } else {
         perror("failed to recv");
@@ -153,6 +159,39 @@ int read_strings(int fd, char* buf) {
 }
 
 bool handle_command(int fd, char* buf) {
-  
+  char c;
+  int cmd;
+  int rv = 0;;
+  printf("enter one of the commands, listed above, \"0\" to finish the work: \n");
+  while ((c = getchar()) != '\n' && c != EOF) {
+    cmd = c - '0';
+  }
+  switch(cmd) {
+    case 1: {
+      printf("enter the message to save:\n");
+      scanf("%s", buf);
+      rv = do_string(fd, CMD_SAVE, buf);
+      break;
+    }
+    case 2: {
+      printf("enter the message to remove:\n");
+      scanf("%s", buf);
+      rv = do_string(fd, CMD_REM, buf);
+      break;
+    }
+    case 3: {
+      rv = read_strings(fd, buf);
+      break;
+    }
+    case 0: {
+      printf("finishing...\n");
+      rv = 3;
+    }
+    default : {
+      printf("unrecognized command %d\n", c);
+    }
+  }
+  return !rv;
 }
+
 
