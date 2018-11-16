@@ -154,7 +154,7 @@ int main() {
             if (setsockopt(newfd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) == -1) {
               perror("setsockopt(SO_KEEPALIVE)");
             } 
-            if (setsockopt(newfd, IPPROTO_IP, TCP_KEEPIDLE, &idle_time, sizeof(idle_time)) == -1) {
+            if (setsockopt(newfd, SOL_TCP, TCP_KEEPIDLE, &idle_time, sizeof(idle_time)) == -1) {
               perror("setsockopt(TCP_KEEPIDLE)");
             }
 
@@ -163,7 +163,7 @@ int main() {
               fdmax = newfd;
             }
             printf("some1 connected on socket %d\n", newfd);
-            send(newfd, welcome_buf, sizeof(welcome_buf), 0);
+            send(newfd, welcome_buf, strlen(welcome_buf), 0);
           }
         } else {
           if ((nbytes = recv(i, buf, sizeof(buf), 0)) <= 0) {
