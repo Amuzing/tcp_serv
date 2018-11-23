@@ -15,8 +15,8 @@ int get_addr_info(const char* address, const char* port, struct addrinfo** ai)
 
 int set_sock_keepalive_opt(int fd, const int *keep_idle, const int *probes_cnt, const int *probes_intvl) 
 {
-  int true = 1;
-  if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &true, sizeof(true)) == -1) {
+  int yes = 1;
+  if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(true)) == -1) {
     perror("setsockopt(SO_KEEPALIVE)");
     return -1;
   } 
@@ -27,8 +27,8 @@ int set_sock_keepalive_opt(int fd, const int *keep_idle, const int *probes_cnt, 
     }
   }
 
-  if (probes != NULL) {
-    if (setsockopt(fd, SOL_TCP, TCP_KEEPCNT, probes, sizeof(*probes)) == -1) {
+  if (probes_cnt != NULL) {
+    if (setsockopt(fd, SOL_TCP, TCP_KEEPCNT, probes_cnt, sizeof(*probes_cnt)) == -1) {
       perror("setsockopt(TCP_KEEPIDLE)");
       return -3;
     }
