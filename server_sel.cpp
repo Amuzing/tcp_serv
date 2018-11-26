@@ -11,9 +11,6 @@ int main() {
   int newfd;
 
   char buf[256];
-  char welcome_buf[] = "Hello. To add a string to the server, type 1 and the string as a param.\n"
-                       "To remove the string from the server, type 2 and the string as a param.\n"
-                       "To list all the strings and the ones who added them, type 3.\n";
   
   int nbytes;
 
@@ -40,8 +37,8 @@ int main() {
   struct timeval recent_tv;
   recent_tv.tv_sec = 60;
   recent_tv.tv_usec = 0;
+  fdmax = listening_fd;
   while (true) {
-    fdmax = listening_fd;
     recent_set = master_set;
     recent_tv = master_tv;
     if (select(fdmax + 1, &recent_set, NULL, NULL, &recent_tv) == -1) {

@@ -10,12 +10,6 @@ int main() {
   int newfd;
 
   char buf[256];
-  char welcome_buf[] =
-      "Hello. To add a string to the server, type 1 and the string as a "
-      "param.\n"
-      "To remove the string from the server, type 2 and the string as a "
-      "param.\n"
-      "To list all the strings and the ones who added them, type 3.\n";
 
   int nbytes;
 
@@ -51,7 +45,7 @@ int main() {
     ufds[i].fd = -1;
   }
 
-  const int wait_time = 3000;  // 1 sec
+  const int wait_time = 60 * 1000;  // 60 sec
   rv = 0;
   while (true) {
     rv = poll(ufds, cur_size, -1);
