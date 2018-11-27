@@ -71,7 +71,6 @@ int send_string(int fd, const char* buf, size_t size, int flags)
   char* temp = malloc(total_size); 
   if (temp == NULL) {
     fprintf(stderr, "An error occured while allocating memory. \n");
-    free(temp);
     return -3;
   }
   strncpy(temp + MSG_SIZE_LEN, buf, size);
@@ -79,7 +78,7 @@ int send_string(int fd, const char* buf, size_t size, int flags)
   ssize_t total_bytes_sent = 0;
   ssize_t bytes_left = total_size;
   ssize_t n = 0;
-  printf("Sending %u bytes...\n", total_size);
+  printf("Sending %s %u bytes long...\n", buf, total_size);
   while(total_bytes_sent < total_size) {
     n = send(fd, temp + total_bytes_sent, bytes_left, flags);
     printf("We sent %ld bytes...\n", n);
@@ -94,7 +93,7 @@ int send_string(int fd, const char* buf, size_t size, int flags)
   return (total_size == total_bytes_sent) ? 0 : -2;
 }
 
-int recv_string(int fd, char* buf, uint32_t* len int flags) 
+int recv_string(int fd, char** buf, uint32_t* len, int flags) 
 {
   uint8_t msg_len[MSG_SIZE_LEN];
   ssize_t total_bytes_received = 0;
@@ -106,14 +105,20 @@ int recv_string(int fd, char* buf, uint32_t* len int flags)
       return -1;
     } else {
       //TODO
+      printf(":(\n");
     }
   }
   *len = deserialize_uint(msg_len) - MSG_SIZE_LEN;
-  buf = malloc(len);
+  *buf = malloc(sizeof(char) * (*len) + 1);
+  if (buf == NULL) {
+    fprintf(stderr, "An error occured while allocating memory. \n");
+    return -3;
+  }
   total_bytes_received = 0;
-  bytes_left = len;
+  bytes_left = *len;
   while (total_bytes_received < bytes_left) {
-    n = recv(fd, buf + total_bytes_received, bytes_left, 0);
+    n = recv(fd, *buf + total_bytes_received, bytes_left, 0);
+    printf("We received %ld bytes...\n", n);
     if (n == -1) { 
       perror("recv: ");
       break; 
@@ -121,5 +126,7 @@ int recv_string(int fd, char* buf, uint32_t* len int flags)
     total_bytes_received += n;
     bytes_left -= n;
   }
-  return (len == total_bytes_received) ? 0 : -2;
+  buf[total_bytes_received] = '\0';
+  printf("Received %s %u bytes long...\n", *buf, *len);
+  return (*len == total_bytes_received) ? 0 : -2;
 }

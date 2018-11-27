@@ -23,7 +23,7 @@ extern "C" {
 #define PORT "5678"
 
 #define MAX_NAME 64
-#define MAX_SIZE 256
+#define MAX_SIZE 4096
 #define MSG_SIZE_LEN sizeof(uint32_t)
 
 #define HEX_MASK 0xff
@@ -44,7 +44,7 @@ uint32_t deserialize_uint(uint8_t* buf);
 
 int send_string(int fd, const char* buf, size_t size, int flags);
 
-int recv_string(int fd, char* buf, uint32_t* len, int flags);
+int recv_string(int fd, char** buf, uint32_t* len, int flags);
 
 
 #ifdef __cplusplus

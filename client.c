@@ -20,14 +20,20 @@ int main(int argc, char* argv[]) {
   int keep_idle = 60;
   set_sock_keepalive_opt(fd, &keep_idle, NULL, NULL);
 
-  if ((nbytes = recv(fd, buf, MAX_SIZE - 1, 0)) == -1) {
+  /*if ((nbytes = recv(fd, buf, MAX_SIZE - 1, 0)) == -1) {
     perror("recv");
     return 3;
-  }
+  }*/
 
-  buf[nbytes] = '\0';
+  char* msg = NULL;
+  uint32_t len;
+  recv_string(fd, &msg, &len, 0);
 
-  printf("%s\n", buf);
+  //buf[nbytes] = '\0';
+
+  printf("%s\n", msg);
+  free(msg);
+  msg = NULL;
 
   printf("enter your name:\n");
   scanf("%s", name);
@@ -37,7 +43,8 @@ int main(int argc, char* argv[]) {
     is_true = handle_command(fd, buf, sizeof(buf));
   }
 
-  safe_close(&fd);
+  close(fd);
+  fd = -1;
 
   return 0;
 }

@@ -29,7 +29,7 @@ tcp_comm_conn.o: $(INCLUDE)tcp_comm_conn.c $(INCLUDE)tcp_comm_conn.h
 	$(CC) $(CFLAGS) -c $(INCLUDE)tcp_comm_conn.c -I $(INCLUDE)
 
 tcp_client.o: $(INCLUDE)tcp_client.c $(INCLUDE)tcp_comm_conn.h
-	$(CC) $(CXXFLAGS) -c $(INCLUDE)tcp_client.c -I $(INCLUDE)
+	$(CC) $(CFLAGS) -c $(INCLUDE)tcp_client.c -I $(INCLUDE)
 
 tcp_server.o: $(INCLUDE)tcp_server.cpp $(INCLUDE)tcp_comm_conn.h
 	$(CXX) $(CXXFLAGS) -c $(INCLUDE)tcp_server.cpp -I $(INCLUDE)

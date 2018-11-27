@@ -1,4 +1,5 @@
 #include "tcp_server.h"
+#include <iostream>
 
 std::list<std::string> str_storage;
 
@@ -63,7 +64,8 @@ int main() {
               fdmax = newfd;
             }
             printf("some1 connected on socket %d\n", newfd);
-            send(newfd, welcome_buf, strlen(welcome_buf), 0);
+            send_string(newfd, welcome_buf, strlen(welcome_buf), 0);
+            //send(newfd, welcome_buf, strlen(welcome_buf), 0);
             printf("Welcome string was sent to socket %d.\n", newfd);
           }
         } else {
@@ -78,6 +80,7 @@ int main() {
           } else {
             printf("\n nbytes: %d, string from buf:%s!!!!\n", nbytes, buf);
             std::string request(buf, nbytes);
+            std::cout << request << std::endl;
             handle_request(i, request, str_storage, names);
           }
           // TODO
