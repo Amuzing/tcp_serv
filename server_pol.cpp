@@ -83,7 +83,8 @@ int main() {
             if ((nbytes = recv(ufds[i].fd, buf, sizeof(buf), 0)) <= 0) {
               if (nbytes == 0) {
                 printf("connection on socket %d was closed\n", ufds[i].fd);
-                safe_close(ufds[i].fd);
+                close(ufds[i].fd);
+                ufds[i].fd = -1;
                 ufds[i].events = 0;
                 ufds[i].revents = 0;
                 memmove(&ufds[i], &ufds[cur_size - 1], sizeof(struct pollfd));

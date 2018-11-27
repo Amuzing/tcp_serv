@@ -57,7 +57,8 @@ int main() {
             new_event.events = EPOLLIN;
             if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &new_event) == -1) {
               perror("epoll_ctl on a new connection: ");
-              safe_close(newfd);
+              close(newfd);
+              newfd = -1;
               continue;
             }
             printf("some1 connected on socket %d\n", newfd);

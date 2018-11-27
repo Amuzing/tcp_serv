@@ -1,11 +1,12 @@
 #pragma once
 
-#include "comm_conn.h"
+#include "tcp_comm_conn.h"
 
 #include <list>
 #include <map>
 #include <string>
 
+#include <iterator>
 #include <fstream>
 
 #ifdef __cplusplus

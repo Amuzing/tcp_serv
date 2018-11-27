@@ -1,6 +1,6 @@
 #pragma once
 
-#include "comm_conn.h"
+#include "tcp_comm_conn.h"
 #include <stdlib.h>
 
 int get_conn_socket(const char* address, const char* port);
