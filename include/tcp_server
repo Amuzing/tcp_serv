@@ -1,0 +1,81 @@
+#pragma once
+
+#include "tcp_comm_conn.h"
+
+#include <list>
+#include <map>
+#include <string>
+
+#include <fstream>
+#include <iterator>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+namespace tcp_server {
+
+typedef char CMD;
+
+class TCP_Server {
+ private:
+  mutable std::string path = "tcp_strings.txt";
+  int listening_fd = -1;
+
+  std::map<int, std::string>& names;
+  std::list<std::string> storage;
+
+  virtual int set_listening_socket(const std::string& _port, const int n_con) final;
+  virtual void init() = 0;
+
+  
+  virtual int define_sighup_handler() final;
+
+  virtual int load_strings() final;
+  virtual int dump_strings() final;
+
+  
+  CMD parse_msg(std::string& msg);
+
+  void set_con_name(int fd, const std::string& name);
+  void save_string(const std::string& str, const std::string& name);
+  void remove_string(const std::string& str);
+  int print_strings(int fd);
+
+  int handle_request(int fd, std::string& msg);
+
+  virtual const std::string get_welcome_string() const final;  
+
+  virtual int wait_for_connection() = 0;
+
+  virtual int listening_socket_event(const int i) = 0;
+  virtual int nonlistening_socket_event(const int i) = 0;
+
+  int accept_new_connection();
+
+  virtual bool is_listening_socket(const int i) = 0;
+  virtual int get_next_index(int& i, const int upper_bound) = 0;
+
+  virtual int handle_events(const int rv) final;
+  virtual int add_new_connection(int newfd) = 0;
+  virtual int remove_connection(int fd) = 0;
+
+ public:
+  TCP_Server(const std::string& _port, const int n_con = 10);
+  TCP_Server(const std::string& _port, const std::string& _str_path,
+             const int n_con = 10);
+  ~TCP_Server();
+  virtual int main() final;
+  virtual void sighup_handler(int sig) final;
+};
+
+}  // namespace tcp_serv
+
+
+void sighup_handler(int sig);
+
+int define_sighup_handler();
+
+#ifdef __cplusplus
+}
+#endif

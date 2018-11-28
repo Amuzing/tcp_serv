@@ -1,18 +1,13 @@
-#include "tcp_server.h"
+#include "tcp_server"
 
-const char* welcome_buf = 
-      "Hello. To add a string to the server, type 1 and the string as a "
-      "param.\n"
-      "To remove the string from the server, type 2 and the string as a "
-      "param.\n"
-      "To list all the strings and the ones who added them, type 3.\n";
+namespace tcp_server {
 
-int get_listening_socket(const char* port, const int n_con) 
-{
+int TCP_Server::set_listening_socket(const std::string& _port,
+                                     const int n_con) {
   struct addrinfo *ai, *p;
 
   int rv = 0;
-  if ((rv = get_addr_info(NULL, port, &ai)) != 0) {
+  if ((rv = get_addr_info(NULL, _port.c_str(), &ai)) != 0) {
     return rv;
   }
 
@@ -46,18 +41,11 @@ int get_listening_socket(const char* port, const int n_con)
     perror("failed to listen");
     return -202;
   }
-
-  return fd;
+  listening_fd = fd;
+  return rv;
 }
 
-int accept_new_connection(const int listening_fd) {
-  struct sockaddr_storage remoteaddr;
-  socklen_t addrlen;
-  addrlen = sizeof(remoteaddr);
-  return accept(listening_fd, (struct sockaddr*)&remoteaddr, &addrlen);
-}
-
-int load_strings(const char* path, std::list<std::string>& storage) {
+int TCP_Server::load_strings() {
   std::ifstream infile(path);
   std::string line;
   if (infile.is_open()) {
@@ -76,7 +64,7 @@ int load_strings(const char* path, std::list<std::string>& storage) {
   }
 }
 
-int dump_strings(const char* path, const std::list<std::string>& storage) {
+int TCP_Server::dump_strings() {
   std::ofstream outfile(path);
   if (outfile.is_open()) {
     for (auto it = std::begin(storage); it != std::end(storage); ++it) {
@@ -89,13 +77,18 @@ int dump_strings(const char* path, const std::list<std::string>& storage) {
   }
 }
 
-int set_con_name(int fd, const std::string& name,
-                 std::map<int, std::string>& names) {
-  names[fd] = name;
-  return 0;
+int TCP_Server::accept_new_connection() {
+  struct sockaddr_storage remoteaddr;
+  socklen_t addrlen;
+  addrlen = sizeof(remoteaddr);
+  return accept(listening_fd, (struct sockaddr*)&remoteaddr, &addrlen);
 }
 
-CMD parse_msg(std::string& msg) {
+void TCP_Server::set_con_name(int fd, const std::string& name) {
+  names[fd] = name;
+}
+
+CMD TCP_Server::parse_msg(std::string& msg) {
   printf("string: %s size: %lu\n", msg.c_str(), msg.size());
   CMD rval = '\0';
   if (msg.size() > 0) {
@@ -107,61 +100,48 @@ CMD parse_msg(std::string& msg) {
   return rval;
 }
 
-int save_string(const std::string& str, const std::string& name,
-                std::list<std::string>& storage) {
+void TCP_Server::save_string(const std::string& str, const std::string& name) {
   storage.push_back(str + ", by " + name);
-  return 0;
 }
 
-int remove_string(const std::string& str, std::list<std::string>& storage) {
+void TCP_Server::remove_string(const std::string& str) {
   for (auto it = std::begin(storage); it != std::end(storage);) {
     if (it->find(str) != std::string::npos) {
-      auto next_it = std::next(it);
-      storage.erase(it);
-      it = next_it;
+      it = storage.erase(it);
     } else {
       ++it;
     }
   }
-  return 0;
 }
 
-int print_strings(int fd, const std::list<std::string>& storage) {
-  
-  std::string delims = "**************************\n";
+int TCP_Server::print_strings(int fd) {
+  const std::string delims = "**************************\n";
   std::string output_str = delims;
-  for(auto it = std::begin(storage); it != std::end(storage); ++it) {
-    output_str += (*it) + "\n";
-    /*printf("sending: %s", it->c_str());
-    if(send(fd, (*it + "\n").c_str(), NT_TO_STR_CR_SIZE(it->size()), 0) == -1) {
-      perror("failed to send");
-    }*/
-  } 
+  for (const auto& str : storage) {
+    output_str += str + "\n";
+  }
   output_str += delims + "\n";
-  //send(fd, delims, strlen(delims), 0);
-  //send(fd, END_PRINT, sizeof(END_PRINT), 0);
   printf("Sending a string %lu bytes long\n", std::size(output_str));
-  return send_string(fd, output_str.c_str(), std::size(output_str), 0); 
+  return send_string(fd, output_str.c_str(), std::size(output_str), 0);
 }
 
-int handle_request(int fd, std::string& msg, std::list<std::string>& storage,
-                   std::map<int, std::string>& names) {
+int TCP_Server::handle_request(int fd, std::string& msg) {
   CMD command = parse_msg(msg);
   switch (command) {
     case '0': {
-      set_con_name(fd, msg, names);
+      set_con_name(fd, msg);
       break;
     }
     case '1': {
-      save_string(msg, names[fd], storage);
+      save_string(msg, names[fd]);
       break;
     }
     case '2': {
-      remove_string(msg, storage);
+      remove_string(msg);
       break;
     }
     case '3': {
-      print_strings(fd, storage);
+      print_strings(fd);
       break;
     }
     default: {
@@ -172,12 +152,12 @@ int handle_request(int fd, std::string& msg, std::list<std::string>& storage,
   return 0;
 }
 
-void sighup_handler(int sig) {
+void TCP_Server::sighup_handler(int sig) {
   extern std::list<std::string> str_storage;
   int fd = open(STR_PATH, O_WRONLY | O_CREAT | O_TRUNC, 777);
   if (fd != -1) {
-    for(auto it = std::begin(str_storage); it != std::end(str_storage); ++it) {
-      write(fd, (*it + "\n").c_str(), NT_TO_STR_CR_SIZE(it->size()));
+    for (const auto& str: storage) {
+      write(fd, (str + "\n").c_str(), str.size() + 1);
     }
     close(fd);
   } else {
@@ -185,9 +165,9 @@ void sighup_handler(int sig) {
   }
 }
 
-int define_sighup_handler() {
+int TCP_Server::define_sighup_handler() {
   struct sigaction hup_sa;
-  hup_sa.sa_handler = sighup_handler;
+  hup_sa.sa_handler = _sighup_handler;
   hup_sa.sa_flags = 0;
   sigemptyset(&hup_sa.sa_mask);
 
@@ -197,3 +177,66 @@ int define_sighup_handler() {
   }
   return 0;
 }
+
+const std::string TCP_Server::get_welcome_string() const {
+  const std::string temp =
+      "Hello. To add a string to the server, type 1 and the string as a "
+      "param.\n"
+      "To remove the string from the server, type 2 and the string as a "
+      "param.\n"
+      "To list all the strings and the ones who added them, type 3.\n";
+  return temp;
+}
+
+int TCP_Server::handle_events(const int rv) {
+  int i = 0;
+  int idx = -1;
+  do {
+    idx = get_next_index(i, rv);
+    if (idx == -1) { break; }
+    if (is_listening_socket(idx)) {
+      if (listening_socket_event(idx) == -1) {
+        perror("listening socket event: ");
+      }
+    } else {
+      if (nonlistening_socket_event(idx) == -1) {
+        perror("nonlistening socket event: ");
+      }
+    } 
+  } while (idx >= 0);
+}
+
+int TCP_Server::main() {
+  int rv = 0;
+  while (true) {
+    try {
+      rv = wait_for_connection();
+    } catch (...) {
+      perror("wait_for_connection");
+      return -1;
+    }
+
+    if (rv > 0) {
+      handle_events(rv);
+    } else if (rv == 0) {
+      printf("Timeout expired... Waiting for the data...\n");
+    } else {
+      perror("wait_for_connection returned negative value: ");
+    }
+  }
+}
+
+void _sighup_handler(int sig) {
+  extern std::list<std::string> str_storage;
+  int fd = open(STR_PATH, O_WRONLY | O_CREAT | O_TRUNC, 777);
+  if (fd != -1) {
+    for (auto it = std::begin(str_storage); it != std::end(str_storage); ++it) {
+      write(fd, (*it + "\n").c_str(), NT_TO_STR_CR_SIZE(it->size()));
+    }
+    close(fd);
+  } else {
+    perror("failed to open a file for dumping data");
+  }
+}
+
+}  // namespace tcp_server
