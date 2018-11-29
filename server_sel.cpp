@@ -54,9 +54,35 @@ int main() {
           if (newfd == -1) {
             perror("failed to accept");
           } else {
-            // keep-alive
-            int idle_time = 60;
-            set_sock_keepalive_opt(newfd, &idle_time, NULL, NULL);
+            /// keep-alive
+            int idle_time = 20;
+            int intvl_time = 15;
+            int probes = 5;
+            if (set_sock_keepalive_opt(newfd, &idle_time, &intvl_time, &probes) == 0) {
+              printf("KEEPALIVE options were set.\n");
+            }
+
+            //setsockopt(newfd, SOL_TCP, TCP_KEEPINTVL, &intvl_time, sizeof(intvl_time));
+
+            intvl_time = 0;
+            idle_time = 0;
+            probes = 0;
+            unsigned int len = sizeof(int);
+
+            if (getsockopt(newfd, SOL_TCP, TCP_KEEPINTVL, (void*)&intvl_time, &len) == -1) {
+              perror("intvl");
+            }
+            printf("INTVL TIME: %d\n", intvl_time);
+            
+            len = sizeof(int);
+            if (getsockopt(newfd, SOL_TCP, TCP_KEEPIDLE, (void*)&idle_time, &len) == -1) {
+              perror("idle_time");
+            }
+            printf("IDLE TIME: %d\n", idle_time);
+            
+            len = sizeof(int);
+            getsockopt(newfd, SOL_TCP, TCP_KEEPCNT, (void*)&probes, &len);
+            printf("PROBES NUM: %d\n", probes);
 
             FD_SET(newfd, &master_set);
             if (newfd > fdmax) {
