@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[80]:
+
 
 import socket
 from random import choices
@@ -32,46 +34,75 @@ ip_address = "127.0.0.1"
 ip_port = 5678
 serv_name = "tcp_server_test"
 
-s = get_conn_sock(ip_address, ip_port)
+try:
+    s = get_conn_sock(ip_address, ip_port)
 
 
 
-s.recv(MSG_SIZE)
+    s.recv(MSG_SIZE)
 
-s.send(CMD_NAME + bytes(serv_name, "utf-8"))
+    s.send(CMD_NAME + bytes(serv_name, "utf-8"))
 
-my_test_strings = []
-for i in range(12):
-    my_test_strings.append(str(get_rand_str(RAND_STR_LEN)))
-
-
-for item in my_test_strings:
-    s.send(CMD_ADD + bytes(item, "utf-8"))
-    sleep(0.125)
+    my_test_strings = []
+    for i in range(12):
+        my_test_strings.append(str(get_rand_str(RAND_STR_LEN)))
 
 
-data = get_data_from_server(s)
-
-for item in my_test_strings:
-    temp = item + ", by " + str(serv_name)
-    assert(temp in data), temp + " is not in data"
-else:
-    print("Everything is ok, all strings arrived")
-
-    
-for item in my_test_strings:
-    s.send(CMD_REM + bytes(item, "utf-8"))
-    sleep(0.125)
+    for item in my_test_strings:
+        s.send(CMD_ADD + bytes(item, "utf-8"))
+        sleep(0.125)
 
 
-data = get_data_from_server(s)
+    data = get_data_from_server(s)
 
-for item in my_test_strings:
-    temp = item + ", by " + str(serv_name)
-    assert(temp not in data), temp + " is in data" 
-else:
-    print("Everything is ok, all strings were deleted")
+    for item in my_test_strings:
+        temp = item + ", by " + str(serv_name)
+        assert(temp in data), temp + " is not in data"
+    else:
+        print("Everything is ok, all strings arrived")
 
 
-s.close()
+    for item in my_test_strings:
+        s.send(CMD_REM + bytes(item, "utf-8"))
+        sleep(0.125)
+
+
+    data = get_data_from_server(s)
+
+    for item in my_test_strings:
+        temp = item + ", by " + str(serv_name)
+        assert(temp not in data), temp + " is in data" 
+    else:
+        print("Everything is ok, all strings were deleted")
+
+finally:
+    s.close()
+
+
+# In[59]:
+
+
+help(assert)
+
+
+# In[30]:
+
+
+import random
+import string
+
+st = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+print(st)
+
+
+# In[46]:
+
+
+help(bytes)
+
+
+# In[ ]:
+
+
+
 
