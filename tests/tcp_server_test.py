@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[80]:
-
-
 import socket
 from random import choices
 from string import ascii_uppercase, digits
@@ -77,32 +74,3 @@ try:
 
 finally:
     s.close()
-
-
-# In[59]:
-
-
-help(assert)
-
-
-# In[30]:
-
-
-import random
-import string
-
-st = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-print(st)
-
-
-# In[46]:
-
-
-help(bytes)
-
-
-# In[ ]:
-
-
-
-
