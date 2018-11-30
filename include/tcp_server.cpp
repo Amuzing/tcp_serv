@@ -141,7 +141,7 @@ int print_strings(int fd, const std::list<std::string>& storage) {
   //send(fd, delims, strlen(delims), 0);
   //send(fd, END_PRINT, sizeof(END_PRINT), 0);
   printf("Sending a string %lu bytes long\n", std::size(output_str));
-  return send_string(fd, output_str.c_str(), std::size(output_str)); 
+  return send_string(fd, output_str.c_str(), std::size(output_str), 0); 
 }
 
 int handle_request(int fd, std::string& msg, std::list<std::string>& storage,

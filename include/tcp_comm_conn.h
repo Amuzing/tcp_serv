@@ -44,7 +44,7 @@ uint32_t deserialize_uint(uint8_t* buf);
 
 int send_string(int fd, const char* buf, size_t size, int flags);
 
-int recv_string(int fd, char* buf, uint32_t* len, int flags);
+int recv_string(int fd, char** buf, uint32_t* len, int flags);
 
 
 #ifdef __cplusplus
