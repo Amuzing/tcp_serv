@@ -8,7 +8,7 @@ all: server_sel client
 
 server_sel: server_sel.o tcp_comm_conn.o tcp_server.o
 	$(CXX) $(CXXFLAGS) server_sel.o tcp_comm_conn.o tcp_server.o -o server_sel
-server_sel.o: server_sel.cpp
+server_sel.o: server_sel.cpp $(INCLUDE)server_sel
 	$(CXX) $(CXXFLAGS) -c server_sel.cpp -o server_sel.o -I $(INCLUDE)
 
 server_pol: server_pol.o tcp_comm_conn.o tcp_server.o
@@ -31,7 +31,7 @@ tcp_comm_conn.o: $(INCLUDE)tcp_comm_conn.c $(INCLUDE)tcp_comm_conn.h
 tcp_client.o: $(INCLUDE)tcp_client.c $(INCLUDE)tcp_comm_conn.h
 	$(CC) $(CFLAGS) -c $(INCLUDE)tcp_client.c -I $(INCLUDE)
 
-tcp_server.o: $(INCLUDE)tcp_server.cpp $(INCLUDE)tcp_comm_conn.h
+tcp_server.o: $(INCLUDE)tcp_server.cpp $(INCLUDE)tcp_comm_conn.h $(INCLUDE)tcp_server
 	$(CXX) $(CXXFLAGS) -c $(INCLUDE)tcp_server.cpp -I $(INCLUDE)
 
 run_serv_sel: server_sel

@@ -13,7 +13,7 @@ int get_addr_info(const char* address, const char* port, struct addrinfo** ai)
 }
 
 
-int set_sock_keepalive_opt(int fd, const int *keep_idle, const int *probes_cnt, const int *probes_intvl) 
+int set_sock_keepalive_opt(int fd, const int *keep_idle, const int *probes_intvl, const int *probes_cnt) 
 {
   int yes = 1;
   if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(true)) == -1) {
@@ -27,15 +27,15 @@ int set_sock_keepalive_opt(int fd, const int *keep_idle, const int *probes_cnt, 
     }
   }
 
-  if (probes_cnt != NULL) {
-    if (setsockopt(fd, SOL_TCP, TCP_KEEPCNT, probes_cnt, sizeof(*probes_cnt)) == -1) {
+  if (probes_intvl != NULL) {
+    if (setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, probes_intvl, sizeof(*probes_intvl)) == -1) {
       perror("setsockopt(TCP_KEEPIDLE)");
       return -3;
     }
   }
 
-  if (probes_intvl != NULL) {
-    if (setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, probes_intvl, sizeof(*probes_intvl)) == -1) {
+  if (probes_cnt != NULL) {
+    if (setsockopt(fd, SOL_TCP, TCP_KEEPCNT, probes_cnt, sizeof(*probes_cnt)) == -1) {
       perror("setsockopt(TCP_KEEPIDLE)");
       return -4;
     }
@@ -100,12 +100,12 @@ int recv_string(int fd, char** buf, uint32_t* len, int flags)
   ssize_t bytes_left = sizeof(msg_len);
   ssize_t n = 0;
   if ((n = recv(fd, msg_len, sizeof(msg_len), 0)) != sizeof(msg_len)) {
-    if (n == -1) {
+    if (n == 0) {
+      return 0;
+      
+    } else {
       perror("recv");
       return -1;
-    } else {
-      //TODO
-      printf(":(\n");
     }
   }
   *len = deserialize_uint(msg_len) - MSG_SIZE_LEN;
@@ -128,5 +128,5 @@ int recv_string(int fd, char** buf, uint32_t* len, int flags)
   }
   buf[total_bytes_received] = '\0';
   printf("Received %s %u bytes long...\n", *buf, *len);
-  return (*len == total_bytes_received) ? 0 : -2;
+  return (*len == total_bytes_received) ? *len : -2;
 }
