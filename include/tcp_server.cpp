@@ -1,4 +1,5 @@
-#include "tcp_server"
+#include "tcp_server.h"
+#include <iostream>
 
 namespace tcp_server {
 
@@ -132,23 +133,36 @@ int TCP_Server::print_strings(int fd) const {
   return send_string(fd, output_str.c_str(), std::size(output_str), 0);
 }
 
-int TCP_Server::handle_request(int fd, std::string& msg) {
+int TCP_Server::handle_request(const int fd, std::string& msg) {
+  printf("Parsing a command and cutting message.\n");
   CMD command = parse_msg(msg);
+  printf("Proceeding with a command %c.\n", command);
   switch (command) {
     case '0': {
+      //printf("Setting desc %d to %");
+      std::cout << "Setting desc " << fd << " to " << msg << "."
+                << std::endl;
       set_con_name(fd, msg);
+      std::cout << "Done." << std::endl;
       break;
     }
     case '1': {
+      std::cout << "Saving msg: " << msg << " by user  " << names[fd] << " ."
+                << std::endl;
       save_string(msg, names[fd]);
+      std::cout << "Done." << std::endl;
       break;
     }
     case '2': {
+      std::cout << "Removing msg: " << msg << " ." << std::endl;
       remove_string(msg);
+      std::cout << "Done." << std::endl;
       break;
     }
     case '3': {
+      std::cout << "Printing msgs to desc " << fd << " ." << std::endl;
       print_strings(fd);
+      std::cout << "Done." << std::endl;
       break;
     }
     default: {
@@ -170,31 +184,41 @@ const std::string TCP_Server::get_welcome_string() const {
 }
 
 int TCP_Server::handle_events(const int rv) {
+  printf("Handle events.\n");
   int i = 0;
   int cur_num = 0;
   int idx = -1;
   do {
+    printf("Getting next index.\n");
     idx = get_next_index(i, cur_num, rv);
+    printf("Idx is %d.\n", idx);
     if (idx == -1) {
       break;
     } else if (idx == -2) {
       printf("Not all the incoming requests were handled.\n");
       return -1;
     }
+    printf("Idx is %d.\n", idx);
     if (is_listening_socket(idx)) {
       if (listening_socket_event(idx) == -1) {
         perror("listening socket event: ");
       }
     } else {
+      printf("Idx is %d.\n", idx);
       if (nonlistening_socket_event(idx) == -1) {
         perror("nonlistening socket event: ");
       }
+      printf("Idx is %d.\n", idx);
     }
+    printf("Next iteration.\n");
+    //printf("Next iteration, idx = %d...\n", idx);
   } while (idx >= 0);
+  printf("Handle events ending.\n");
   return 0;
 }
 
 int TCP_Server::nonlistening_socket_event(const int fd) {
+  printf("Nonlistening socket event.\n");
   char* buf = NULL;
   int nbytes = 0;
   uint32_t len = 0;
@@ -207,10 +231,15 @@ int TCP_Server::nonlistening_socket_event(const int fd) {
     }
     remove_connection(fd);
   } else {
+    printf("Creating a string from buffer %d bytes long.\n", nbytes);
     std::string request(buf, nbytes);
+    printf("Memory was allocated at: %x.\n", &buf[0]);
     free(buf);
+    printf("Created a string and freed the memory.\n");
+    std::cout << request << std::endl;
     handle_request(fd, request);
   }
+  printf("Nonlistening socket event ending.\n");
   return 0;
 }
 
@@ -218,6 +247,7 @@ int TCP_Server::main() {
   int rv = 0;
   while (true) {
     try {
+      printf("Waiting for connections...\n");
       rv = wait_for_connection();
     } catch (...) {
       perror("wait_for_connection");

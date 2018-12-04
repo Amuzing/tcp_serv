@@ -99,15 +99,16 @@ int recv_string(int fd, char** buf, uint32_t* len, int flags)
   ssize_t total_bytes_received = 0;
   ssize_t bytes_left = sizeof(msg_len);
   ssize_t n = 0;
+  printf("Trying to recv a string.\n");
   if ((n = recv(fd, msg_len, sizeof(msg_len), 0)) != sizeof(msg_len)) {
     if (n == 0) {
       return 0;
-      
     } else {
       perror("recv");
       return -1;
     }
   }
+  printf("Received a string.\n");
   *len = deserialize_uint(msg_len) - MSG_SIZE_LEN;
   *buf = malloc(sizeof(char) * (*len) + 1);
   if (buf == NULL) {
@@ -126,7 +127,7 @@ int recv_string(int fd, char** buf, uint32_t* len, int flags)
     total_bytes_received += n;
     bytes_left -= n;
   }
-  buf[total_bytes_received] = '\0';
+  //buf[total_bytes_received] = '\0';
   printf("Received %s %u bytes long...\n", *buf, *len);
   return (*len == total_bytes_received) ? *len : -2;
 }

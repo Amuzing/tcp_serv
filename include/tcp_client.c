@@ -67,7 +67,7 @@ int read_strings(int fd, char *buf, size_t max_size) {
 
   send_cmd_to_server(fd, CMD_LIST, buf, max_size);
 
-  if (recv_string(fd, msg, &len, 0) == 0) {
+  if (recv_string(fd, &msg, &len, 0) == 0) {
     printf("%s\n", msg);
 
     free(msg);
@@ -79,7 +79,7 @@ int read_strings(int fd, char *buf, size_t max_size) {
 bool handle_command(int fd, char *buf, size_t max_size) {
   char cmd = '0';
   int rv = 0;
-  char temp[256];
+  //char temp[256];
   char line[256];
   printf(
       "enter one of the commands, listed above, \"0\" to finish the work:\n");
@@ -94,17 +94,9 @@ bool handle_command(int fd, char *buf, size_t max_size) {
     }
     case '1': {
       printf("enter the message to save:\n");
-      // line = malloc(max_size);
-      if (line != NULL) {
-        // fflush(stdin);
-        fgets(line, max_size, stdin);
-        scanf("%s", line);
-        rv = send_cmd_to_server(fd, CMD_SAVE, line, max_size);
-        // free(line);
-        // line = NULL;
-      } else {
-        printf("no memory to allocate :(\n");
-      }
+
+      scanf("%s", line);
+      rv = send_cmd_to_server(fd, CMD_SAVE, line, max_size);
       // scanf("%256[0-9a-zA-Z]", buf);
       break;
     }
@@ -112,7 +104,8 @@ bool handle_command(int fd, char *buf, size_t max_size) {
       printf("enter the message to remove: ");
       // line = malloc(max_size);
       if (line != NULL) {
-        fgets(line, max_size, stdin);
+        scanf("%s", line);
+        // fgets(line, max_size, stdin);
         rv = send_cmd_to_server(fd, CMD_REM, line, max_size);
         //(line);
         // line = NULL;

@@ -14,6 +14,7 @@ int main(int argc, char* argv[]) {
   if((fd = get_conn_socket(address, PORT)) < 0) {
     //TODO
     printf(":(\n");
+    return 1;
   }
 
   // keep-alive

@@ -1,19 +1,14 @@
-#include <server_sel>
-
-namespace server_select {
+#include "server_sel.h"
 
 int main() {
-  TCP_Server_Sel serv = TCP_Server_Sel("5678");
+  server_select::TCP_Server_Sel serv("5678");
   serv.main();
   return 0;
 }
 
-TCP_Server_Sel::TCP_Server_Sel(const std::string& _port, const int _n_con)
-    : TCP_Server(_port, _n_con) {
-  master_tv.tv_sec = 60;
-  master_tv.tv_usec = 0;
-  init();
-}
+namespace server_select {
+
+//deleg constr
 
 TCP_Server_Sel::TCP_Server_Sel(const std::string& _port,
                                const std::string& _str_path, const int _n_con)
@@ -24,6 +19,7 @@ TCP_Server_Sel::TCP_Server_Sel(const std::string& _port,
 }
 
 void TCP_Server_Sel::init() {
+  load_strings();
   FD_ZERO(&master_set);
   FD_ZERO(&recent_set);
   set_listening_socket(get_port(), get_n_con());
@@ -55,9 +51,10 @@ int TCP_Server_Sel::add_new_connection() {
     fdmax = newfd;
   }
   printf("Someone connected on socket %d.\n", newfd);
-  const char* wlcm_str = get_welcome_string().c_str();
-  send_string(newfd, wlcm_str, strlen(wlcm_str), 0);
+  send_string(newfd, get_welcome_string().c_str(),
+              strlen(get_welcome_string().c_str()), 0);
   printf("Welcome string was sent to socket %d.\n", newfd);
+  printf("Listening socket event ending.\n");
   return 0;
 }
 
@@ -72,9 +69,10 @@ bool TCP_Server_Sel::is_listening_socket(const int fd) const {
 
 int TCP_Server_Sel::get_next_index(int& i, int& cur_num, const int total_num) {
   for (; i <= fdmax; ++i) {
+    printf("Checking ISSET.\n");
     if (FD_ISSET(i, &recent_set)) {
       ++cur_num;
-      return i;
+      return i++;
     }
   }
   if (cur_num == total_num) {
@@ -85,6 +83,7 @@ int TCP_Server_Sel::get_next_index(int& i, int& cur_num, const int total_num) {
 }
 
 int TCP_Server_Sel::listening_socket_event(const int i) {
+  printf("Listening socket event.\n");
   return add_new_connection();
 }
 
