@@ -127,7 +127,7 @@ int recv_string(int fd, char** buf, uint32_t* len, int flags)
     total_bytes_received += n;
     bytes_left -= n;
   }
-  //buf[total_bytes_received] = '\0';
+  (*buf)[total_bytes_received] = '\0';
   printf("Received %s %u bytes long...\n", *buf, *len);
   return (*len == total_bytes_received) ? *len : -2;
 }
