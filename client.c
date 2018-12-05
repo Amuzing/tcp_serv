@@ -3,7 +3,6 @@
 
 int main(int argc, char* argv[]) {
   
-  int nbytes;
   bool is_true = true;
 
   char name[MAX_NAME];

@@ -66,17 +66,19 @@ class TCP_Server {
 
   virtual int wait_for_connection() = 0;
 
-  virtual int listening_socket_event(const int i) = 0;
+  virtual int listening_socket_event() final;
   virtual int nonlistening_socket_event(const int i) final;
 
   virtual int accept_new_connection() final;
 
-  virtual bool is_listening_socket(const int i) const = 0;
+  virtual bool is_listening_socket(const int idx) const final;
   virtual int get_next_index(int& i, int& cur_num,const int total_num) = 0;
 
   virtual int handle_events(const int rv) final;
-  virtual int add_new_connection() = 0;
+  virtual int add_new_connection(int newfd) = 0;
   virtual void remove_connection(const int fd) = 0;
+
+  virtual int idx_to_fd(const int idx) const = 0;
 
  public:
   TCP_Server(const std::string& _port, const int _n_con = 10);

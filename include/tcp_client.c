@@ -37,7 +37,7 @@ int get_conn_socket(const char *address, const char *port) {
 
 int send_msg(int fd, char *buf) {
   printf("sending:  %s\n", buf);
-  if (send_string(fd, buf, strlen(buf), 0) == -1) {
+  if (send_string(fd, buf, strlen(buf), MSG_DONTWAIT) == -1) {
     perror("failed to send");
     return 1;
   }

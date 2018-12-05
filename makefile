@@ -13,7 +13,7 @@ server_sel.o: server_sel.cpp $(INCLUDE)server_sel.h
 
 server_pol: server_pol.o tcp_comm_conn.o tcp_server.o
 	$(CXX) $(CXXFLAGS) server_pol.o tcp_comm_conn.o tcp_server.o -o server_pol
-server_pol.o: server_pol.cpp
+server_pol.o: server_pol.cpp $(INCLUDE)server_pol.h
 	$(CXX) $(CXXFLAGS) -c server_pol.cpp -o server_pol.o -I $(INCLUDE)
 
 server_epol: server_epol.o tcp_comm_conn.o tcp_server.o

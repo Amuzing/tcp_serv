@@ -15,12 +15,10 @@ class TCP_Server_Sel : public tcp_server::TCP_Server {
 
   virtual int wait_for_connection();
 
-  virtual int add_new_connection();
+  virtual int add_new_connection(int newfd);
   virtual void remove_connection(const int fd);
 
-  virtual int listening_socket_event(const int i);
-
-  virtual bool is_listening_socket(const int fd) const;
+  virtual int idx_to_fd(int idx) const;
   virtual int get_next_index(int& i, int& cur_num, const int total_num);
 
  public:
