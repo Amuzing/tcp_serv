@@ -53,18 +53,14 @@ int TCP_Server_Pol::add_new_connection(int newfd) {
   }
   ufds[cur_size].fd = newfd;
   ufds[cur_size].events = POLLIN;
+  ufds[cur_size].revents = 0;
   ++cur_size;
   return 0;
 }
 
 void TCP_Server_Pol::remove_connection(int idx) {
   close(idx_to_fd(idx));
-  ufds[idx].fd = -1;
-  ufds[idx].events = 0;
-  ufds[idx].revents = 0;
-  
-  memmove(&ufds[idx], &ufds[cur_size - 1], sizeof(struct pollfd));
-  --cur_size;
+  memmove(&ufds[idx], &ufds[--cur_size], sizeof(struct pollfd));
 }
 
 int TCP_Server_Pol::get_next_index(int& i, int& cur_num, const int total_num) {

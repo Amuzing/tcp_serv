@@ -256,7 +256,7 @@ int TCP_Server::nonlistening_socket_event(const int idx) {
       perror("failed to recv: ");
       return -1;
     }
-    remove_connection(fd);
+    remove_connection(idx);
   } else {
     printf("Creating a string from buffer %d bytes long.\n", nbytes);
     std::string request(buf, nbytes);
