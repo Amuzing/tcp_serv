@@ -1,96 +1,87 @@
-#include <sys/epoll.h>
-#include "tcp_server.h"
-
-std::list<std::string> str_storage;
+#include "server_epol.h"
 
 int main() {
-  int newfd;
-
-  char buf[256];
-
-  int nbytes;
-
-  define_sighup_handler();
-
-  load_strings(STR_PATH, str_storage);
-
-  std::map<int, std::string> names;
-
-  int listening_fd = -1;
-  if ((listening_fd = get_listening_socket(PORT, N_CON)) < 0) {
-    // TODO
-    printf(":(\n");
-    exit(1);
-  }
-
-  int efd = epoll_create1(0);
-
-  struct epoll_event new_event;
-  const int MAX_CONN = 64;
-
-  struct epoll_event events[MAX_CONN];
-
-  new_event.data.fd = listening_fd;
-  new_event.events = EPOLLIN;
-
-  if (epoll_ctl(efd, EPOLL_CTL_ADD, listening_fd, &new_event) == -1) {
-    perror("epoll_ctl on listening socket ");
-    return 1;
-  }
-
-  while (true) {
-    int n = epoll_wait(efd, events, MAX_CONN, -1);
-
-    if (n > 0) {
-      for (int i = 0; i < n; ++i) {
-        if (events[i].data.fd == listening_fd) {  // event on listening socket
-          printf("Listening socket event on socket %d.\n", events[i].data.fd);
-          newfd = accept_new_connection(listening_fd);
-          if (newfd == -1) {
-            perror("failed to accept");
-          } else {
-            // keep-alive
-            int idle_time = 60;
-            set_sock_keepalive_opt(newfd, &idle_time, NULL, NULL);
-            memset(&new_event, 0, sizeof(new_event));
-            new_event.data.fd = newfd;
-            new_event.events = EPOLLIN;
-            if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &new_event) == -1) {
-              perror("epoll_ctl on a new connection: ");
-              close(newfd);
-              newfd = -1;
-              continue;
-            }
-            printf("some1 connected on socket %d\n", newfd);
-            send(newfd, welcome_buf, strlen(welcome_buf), 0);
-            printf("Welcome string was sent to socket %d.\n", newfd);
-          }
-        } else {  // event on non listening socket
-          if ((nbytes = recv(events[i].data.fd, buf, sizeof(buf), 0)) <= 0) {
-            if (nbytes == 0) {
-              printf("connection on socket %d was closed\n", events[i].data.fd);
-              if (epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, NULL) ==
-                  -1) {
-                perror("epoll_ctl on a new connection: ");
-              }
-              close(events[i].data.fd);
-            } else {
-              perror("failed to recv");
-            }
-          } else {
-            printf("\n nbytes: %d, string from buf:%s!!!!\n", nbytes, buf);
-            std::string request(buf, nbytes);
-            handle_request(events[i].data.fd, request, str_storage, names);
-          }
-        }
-      }
-    } else if (n == 0) {
-      printf("Timeout occured. Continue...\n");
-      continue;
-    } else {
-      perror("epoll_wait: ");
-    }
-  }
-
+  server_epoll::TCP_Server_Epol serv("5678");
+  serv.main();
   return 0;
 }
+
+namespace server_epoll {
+TCP_Server_Epol::TCP_Server_Epol(const std::string& _port, const int _max_conn,
+                                 const int _wait_time,
+                                 const std::string& _str_path, const int _n_con)
+    : TCP_Server(_port, _str_path, _n_con),
+      max_conn(_max_conn),
+      wait_time(_wait_time) {
+  init();
+}
+
+TCP_Server_Epol::~TCP_Server_Epol() {
+  printf("Freeing memory before deleting the object.\n");
+  free(events);
+}
+
+void TCP_Server_Epol::init() {
+  load_strings();
+
+  set_listening_socket(get_port(), get_n_con());
+
+  events = (struct epoll_event*)malloc(max_conn * sizeof(struct epoll_event));
+
+  efd = epoll_create1(0);
+  struct epoll_event new_event;
+  new_event.data.fd = get_listening_fd();
+  new_event.events = EPOLLIN;
+
+  if (epoll_ctl(efd, EPOLL_CTL_ADD, get_listening_fd(), &new_event) == -1) {
+    perror("epoll_ctl on listening socket: ");
+  }
+}
+
+int TCP_Server_Epol::wait_for_connection() {
+  int rv = epoll_wait(efd, events, max_conn, wait_time);
+  if (rv == -1) {
+    throw;
+  }
+  return rv;
+}
+
+int TCP_Server_Epol::add_new_connection(int newfd) {
+  struct epoll_event new_event;
+  memset(&new_event, 0, sizeof(new_event));
+  new_event.data.fd = newfd;
+  new_event.events = EPOLLIN;
+  if (epoll_ctl(efd, EPOLL_CTL_ADD, newfd, &new_event) == -1) {
+    perror("epoll_ctl on a new connection: ");
+    close(newfd);
+    return -1;
+  }
+  return 0;
+}
+
+void TCP_Server_Epol::remove_connection(int idx) {
+  int fd = idx_to_fd(idx);
+  if (epoll_ctl(efd, EPOLL_CTL_DEL, fd, NULL) == -1) {
+    perror("epoll_ctl on removing connection: ");
+  }
+  close(fd); 
+}
+
+int TCP_Server_Epol::get_next_index(int& i, int& cur_num, const int total_num) {
+  for(; i < total_num; ++i) {
+    printf("Checking events.\n");
+    ++cur_num;
+    return i++;
+  }
+  if (cur_num == total_num) {
+    return -1;
+  } else {
+    return -2;
+  }
+}
+
+int TCP_Server_Epol::idx_to_fd(const int idx) const {
+  return events[idx].data.fd;
+}
+
+}  // namespace server_epoll

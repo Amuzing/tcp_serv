@@ -1,9 +1,9 @@
 #include "server_pol.h"
 
-int main() { 
+int main() {
   server_poll::TCP_Server_Pol serv("5678");
   serv.main();
-  return 0; 
+  return 0;
 }
 
 namespace server_poll {

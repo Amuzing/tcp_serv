@@ -26,7 +26,7 @@ class TCP_Server_Pol : public tcp_server::TCP_Server {
  public:
   TCP_Server_Pol(const std::string& _port,
                  const int _max_conn = 64,
-                 const int wait_time = 60 * 1000,
+                 const int _wait_time = 60 * 1000,
                  const std::string& _str_path = "tcp_strings.txt",
                  const int _n_con = 10);
   ~TCP_Server_Pol();
